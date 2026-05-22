@@ -1,5 +1,5 @@
 """
-main.py (временная версия для тестирования полной обработки)
+main.py - основной модуль для обработки прайс-листов
 """
 
 import sys
@@ -10,12 +10,13 @@ from config.settings import PRICES_FILE_PATTERN, SPARE_PARTS_FILE_PATTERN
 from src.utils import get_current_date_str, find_file_by_pattern
 from src.registry import is_processed, mark_processed
 from src.processor import process_excel_pair
+from src.error_handler import log_critical_error  # добавлено
 
 # Настройка логгера
 LOG_FOLDER.mkdir(parents=True, exist_ok=True)
-logger.remove(0)  # удаляем стандартный обработчик (консольный вывод по умолчанию)
+logger.remove(0)
 logger.add(LOG_FOLDER / "app.log", rotation="1 day", retention="7 days", level="DEBUG")
-logger.add(sys.stdout, level="INFO")  # добавляем консольный вывод
+logger.add(sys.stdout, level="INFO")
 
 def main():
     logger.info("=== ЗАПУСК ОБРАБОТКИ ===")
@@ -33,7 +34,6 @@ def main():
     
     if not prices_file:
         logger.warning(f"Файл цен не найден: {PRICES_FILE_PATTERN.format(date=today)}")
-        # Здесь будет заглушка email
         return
     
     if not spare_file:
@@ -71,4 +71,9 @@ def main():
     logger.info("=== ЗАВЕРШЕНО ===")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.critical(f"Необработанная критическая ошибка: {e}")
+        log_critical_error(e, context={"script": "main.py", "source_folder": str(SOURCE_FOLDER)})
+        sys.exit(1)
